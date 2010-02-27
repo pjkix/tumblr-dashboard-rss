@@ -4,9 +4,9 @@ Tumblr Dashboard RSS
 	Author: 
 		PJ Kix <pj@pjkix.com>
 	Version: 
-		1.0.3
+		1.0.4
 	Copyright: 
-		(cc) 2010 pjkix
+		(cc) 2010 pjkix some rights reserved
 	License:
 		http://creativecommons.org/licenses/by-nc-nd/3.0/
 	See Also:
@@ -15,17 +15,19 @@ Tumblr Dashboard RSS
 Overview
 --------
 
-This PHP script uses the tumblr API to read the dashboard xml and then output an RSS feed.
+This script uses the tumblr API to read the dashboard xml and then output an RSS feed.
 
 Usage
 -----
 
-upload the script to a public location on a web server running php.
-either edit the php script directly to set authentication or edit the config.ini
+Upload the PHP script to a public location on a web server running PHP 5.
+Either a) edit the php script directly to set authentication 
+or b) copy the config.ini.sample as config.ini and edit the settings.
 
 Todo
 ----
-
+* switch post types
+* content embeding / previews
 * make it more secure
 * multi-user friendly
 * content compression

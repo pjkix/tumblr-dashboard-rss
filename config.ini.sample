@@ -6,6 +6,6 @@ email = "user@example.com"
 password = "password"
 
 [feed]
-title = "My tumbler feed"
-link = http://example.com
-description = "my tumbler dashboard feed"
+title = "My tumbler Dashboard Feed"
+link = http://tumblr.com/dashboard
+description = "My tumbler dashboard feed"

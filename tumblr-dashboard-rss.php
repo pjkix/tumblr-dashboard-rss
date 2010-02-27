@@ -9,8 +9,8 @@
  * @copyright (cc) 2010 pjkix
  * @license http://creativecommons.org/licenses/by-nc-nd/3.0/
  * @see http://www.tumblr.com/docs/en/api
- * @version 1.0.3 $Id:$
- * @todo make it more secure, multi-user friendly, compression 
+ * @version 1.0.4 $Id:$
+ * @todo post types, make it more secure, multi-user friendly, compression
  */
 
 /** Authorization info */
@@ -42,7 +42,8 @@ function fetch_tumblr_dashboard_xml($email, $password) {
 	    array(
 	        'email'     => $email,
 	        'password'  => $password,
-	        'generator' => 'API example'
+	        'generator' => 'tumblr Dashboard Feed 1.0',
+	        'num' => '50'
 	    )
 	);
 
@@ -63,6 +64,8 @@ function fetch_tumblr_dashboard_xml($email, $password) {
 		// cache xml file ... check last mod & serve static
 	} else if ($status == 403) {
 		echo 'Bad email or password';
+	} else if ($status == 503) {
+		echo 'Rate Limit Exceded or Service Down';
 	} else {
 		echo "Error: $result\n";
 	}
@@ -83,9 +86,9 @@ function read_xml($result)
 	$i = 0;
 	foreach ($xml->posts->post as $post) {
 		// var_dump($post);
-		$posts[$i]['title'] = $post['slug'];
+		$posts[$i]['title'] = $post['slug']; // wish there was a real title
 		$posts[$i]['description'] = $post['type']; // maybe do somehting intelligent with type
-		$posts[$i]['link'] = $post['url-with-slug']; // wish there was a real title
+		$posts[$i]['link'] = $post['url-with-slug'];
 		$posts[$i]['date'] = date(DATE_RSS, strtotime($post['date']) );
 		$i++;
 	}
@@ -130,11 +133,11 @@ function output_rss ($posts)
 	$rss->appendChild($channel);
 
 	// set up feed properties
-	$title = $dom->createElement('title', 'Feed Title');
+	$title = $dom->createElement('title', 'My Tumblr Dashboard Feed');
 	$channel->appendChild($title);
-	$link = $dom->createElement('link', 'http://example.com');
+	$link = $dom->createElement('link', 'http://tumblr.com/dashboard');
 	$channel->appendChild($link);
-	$description = $dom->createElement('description', 'Feed description');
+	$description = $dom->createElement('description', 'My tumblr dashboard feed');
 	$channel->appendChild($description);
 	$language = $dom->createElement('language', 'en-us');
 	$channel->appendChild($language);
