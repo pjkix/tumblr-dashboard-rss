@@ -1,0 +1,33 @@
+Tumblr Dashboard RSS
+====================
+
+	Author: 
+		PJ Kix <pj@pjkix.com>
+	Version: 
+		1.0.3
+	Copyright: 
+		(cc) 2010 pjkix
+	License:
+		http://creativecommons.org/licenses/by-nc-nd/3.0/
+	See Also:
+		http://www.tumblr.com/docs/en/api
+
+Overview
+--------
+
+This PHP script uses the tumblr API to read the dashboard xml and then output an RSS feed.
+
+Usage
+-----
+
+upload the script to a public location on a web server running php.
+either edit the php script directly to set authentication or edit the config.ini
+
+Todo
+----
+
+* make it more secure
+* multi-user friendly
+* content compression
+* api request caching
+

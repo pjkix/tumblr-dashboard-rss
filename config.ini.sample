@@ -1,0 +1,11 @@
+;; Tumblr Dashboard RSS settings
+;; note: single quotes might break, but double quotes or no quotes is fine 
+
+[tumblr]
+email = "user@example.com"
+password = "password"
+
+[feed]
+title = "My tumbler feed"
+link = http://example.com
+description = "my tumbler dashboard feed"
