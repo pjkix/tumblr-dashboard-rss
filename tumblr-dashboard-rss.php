@@ -13,6 +13,11 @@
  * @todo post types, make it more secure, multi-user friendly, compression
  */
 
+//* debug
+ini_set('display_errors', true) ;
+error_reporting (E_ALL | E_STRICT) ;
+//*/
+
 /** Authorization info */
 $tumblr_email    = 'email@example.com';
 $tumblr_password = 'password';
@@ -23,6 +28,9 @@ if ( file_exists('config.ini') ) {
 	$tumblr_email = $config['tumblr']['email'];
 	$tumblr_password = $config['tumblr']['password'];
 }
+
+// default to GMT for dates
+// date_default_timezone_set('GMT');
 
 fetch_tumblr_dashboard_xml($tumblr_email, $tumblr_password);
 
@@ -108,18 +116,20 @@ function output_rss ($posts)
 	if (!is_array($posts)) die('no posts ...');
 	$lastmod = strtotime($posts[0]['date']);
 	
+	// http headers
 	header('Content-type: text/xml'); // set mime ... application/rss+xml
-	header('Cache-Control: max-age=3600, must-revalidate'); // cache control
-	header('Last-Modified: ' . date('r', $lastmod) );
-	header('Expires: ' . date('r', $lastmod + 3600));
+	header('Cache-Control: max-age=300, must-revalidate'); // cache control 5 mins
+	header('Last-Modified: ' . gmdate('D, j M Y H:i:s T', $lastmod) ); //D, j M Y H:i:s T
+	header('Expires: ' . gmdate('D, j M Y H:i:s T', time() + 300));
 
 	// conditional get ... 
-	$ifmod = isset($_SERVER['HTTP_IF_MODIFIED_SINCE']) ? $_SERVER['HTTP_IF_MODIFIED_SINCE'] === date('r', $lastmod) : false; 
+	$ifmod = isset($_SERVER['HTTP_IF_MODIFIED_SINCE']) ? $_SERVER['HTTP_IF_MODIFIED_SINCE'] === gmdate('D, j M Y H:i:s T', $lastmod) : false; 
 	if ( false !== $ifmod ) {
 		header('HTTP/1.0 304 Not Modified'); 
 		exit; 
 	}
 
+	// build rss using dom
 	$dom = new DomDocument();
 	$dom->formatOutput = true;
 	$dom->encoding = 'utf-8';
