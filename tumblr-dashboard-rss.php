@@ -30,7 +30,7 @@ if ( file_exists('config.ini') ) {
 }
 
 // default to GMT for dates
-// date_default_timezone_set('GMT');
+date_default_timezone_set('GMT');
 
 fetch_tumblr_dashboard_xml($tumblr_email, $tumblr_password);
 
