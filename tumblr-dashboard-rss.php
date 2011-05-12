@@ -22,12 +22,12 @@ error_reporting (E_ALL | E_STRICT) ;
 $tumblr_email    = 'email@example.com';
 $tumblr_password = 'password';
 
-/** read config ... if available
+/** read config ... if available */
 if ( file_exists('config.ini') ) {
 	$config = parse_ini_file('config.ini', true);
 	$tumblr_email = $config['tumblr']['email'];
 	$tumblr_password = $config['tumblr']['password'];
-} */
+}
 
 // default to GMT for dates
 date_default_timezone_set('GMT');
