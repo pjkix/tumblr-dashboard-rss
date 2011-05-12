@@ -22,12 +22,12 @@ error_reporting (E_ALL | E_STRICT) ;
 $tumblr_email    = 'email@example.com';
 $tumblr_password = 'password';
 
-/** read config ... if available */
+/** read config ... if available
 if ( file_exists('config.ini') ) {
 	$config = parse_ini_file('config.ini', true);
 	$tumblr_email = $config['tumblr']['email'];
 	$tumblr_password = $config['tumblr']['password'];
-}
+} */
 
 // default to GMT for dates
 date_default_timezone_set('GMT');
@@ -87,20 +87,75 @@ function fetch_tumblr_dashboard_xml($email, $password) {
  */
 function read_xml($result)
 {
-	// $xml = simplexml_load_string($result);
+	// fix quality="best">
+	$result = str_replace("quality=\"best\">","quality=\"best\"&gt;",$result);
+	
+	// fix </embed>
+	$result = str_replace("</embed>","&lt;embed/&gt;",$result);
+
+	$xml = simplexml_load_string($result);
+	
 	$xml = new SimpleXMLElement($result);
 	// var_dump($xml);die;
 	$posts = array();
 	$i = 0;
 	foreach ($xml->posts->post as $post) {
-		// var_dump($post);
-		$posts[$i]['title'] = $post['slug']; // wish there was a real title
+		
+		$log = $post->{'tumblelog'};
+		$log = strtoupper((string)$log['name']).' ('.(string)$log['title'].')';
+		$posts[$i]['title'] = $post['slug'].' '.$log.' ['.$post['type'].']'; // wish there was a real title
 		$posts[$i]['description'] = $post['type']; // maybe do somehting intelligent with type
+		
+		switch($post['type']) {
+			case 'photo':
+				// Pick the first photo in the set.
+				$photo_links = $post->{'photo-url'};
+				$posts[$i]['data'] = $photo_links[0];
+				$posts[$i]['quote'] = $post->{'photo-caption'};
+				break;
+			case 'regular':
+				$posts[$i]['data'] = $post->{'regular-title'};
+				break;
+			case 'answer':
+				$posts[$i]['data'] = $post->{'question'};
+				$posts[$i]['quote'] = $post->{'answer'};
+				break;
+			case 'video':
+				$posts[$i]['data'] = $post->{'video-player'};
+				$posts[$i]['quote'] = $post->{'video-caption'};
+				break;
+			case 'quote':
+				$posts[$i]['quote'] = $post->{'quote'};
+				break;
+			case 'audio':
+				//$posts[$i]['data'] = $post->{'audio-player'};
+				$posts[$i]['quote'] = $post->{'audio-caption'};
+				break;
+			case 'conversation':
+				$posts[$i]['data'] = $post->{'conversation-title'};
+				
+				$lines = array();
+				foreach($post->{'conversation'}->{'line'} as $line){
+					$lines[] = "&lt;dt&gt;".$line['label']."&lt;/dt&gt;&lt;dd&gt;".(string)$line."&lt;/dd&gt;";
+				}
+				
+				if( is_array($lines) ){
+					$convo = "&lt;dl&gt;".implode("\n",$lines)."&lt;/dl&gt;";
+					$posts[$i]['quote'] = $convo;
+				}
+				break;
+			default:
+				//var_dump($post->asXML());
+				//print "<!-- \n\n\t ".$post['type']."\n\n -->";
+				die();
+				break;
+		}
+		
 		$posts[$i]['link'] = $post['url-with-slug'];
 		$posts[$i]['date'] = date(DATE_RSS, strtotime($post['date']) );
+		
 		$i++;
 	}
-	// var_dump($posts);
 	return $posts;
 }
 
@@ -179,8 +234,36 @@ function output_rss ($posts)
 		$item->appendChild( $link );
 		$title = $dom->createElement( "title" , $post['title'] );
 		$item->appendChild( $title );
-		$description = $dom->createElement( "description", $post['description'] );
+		
+		switch($post['description']){
+			case 'photo':
+				$description = $dom->createElement( "description", "&lt;img src=\"".$post['data']."\" /&gt;"."&lt;br /&gt;&lt;br /&gt;".$post['quote']."&lt;br /&gt;" );
+				break;
+			case 'regular':
+				$description = $dom->createElement( "description", $post['data']."&lt;br /&gt;&lt;br /&gt;&lt;br /&gt;" );
+				break;
+			case 'answer':
+				$description = $dom->createElement( "description", "&lt;strong&gt;".$post['data']."&lt;/strong&gt;&lt;br /&gt;&lt;blockquote&gt;".$post['quote']."&lt;/blockquote&gt;&lt;br /&gt;&lt;br /&gt;&lt;br /&gt;");
+				break;
+			case 'video':
+				$description = $dom->createElement( "description", $post['data']."&lt;br /&gt;".$post['quote']."&lt;br /&gt;&lt;br /&gt;" );
+				break;
+			case 'audio':
+				$description = $dom->createElement( "description", "&lt;br /&gt;".$post['quote']."&lt;br /&gt;&lt;br /&gt;" );
+				break;
+			case 'quote':
+				$description = $dom->createElement( "description", "&lt;blockquote&gt;".$post['quote']."&lt;/blockquote;&gt;&lt;br /&gt;&lt;br /&gt;&lt;br /&gt;");
+				break;
+			case 'conversation':
+				$description = $dom->createElement( "description", "&lt;strong&gt;".$post['data']."&lt;/strong&gt;&lt;br /&gt;".$post['quote']."&lt;br /&gt;&lt;br /&gt;&lt;br /&gt;");
+				break;
+			default:
+				$description = $dom->createElement( "description", $post['description'] );
+				break;
+		}
+		
 		$item->appendChild( $description );
+
 		$pubDate = $dom->createElement( "pubDate", $post['date'] );
 		$item->appendChild( $pubDate );
 		$guid = $dom->createElement( "guid", $post['link'] );
