@@ -30,7 +30,7 @@ if ( file_exists('config.ini') ) {
 }
 
 // default to GMT for dates
-date_default_timezone_set('GMT');
+date_default_timezone_set('America/New_York');
 
 fetch_tumblr_dashboard_xml($tumblr_email, $tumblr_password);
 
@@ -51,10 +51,10 @@ function fetch_tumblr_dashboard_xml($email, $password) {
 	        'email'     => $email,
 	        'password'  => $password,
 	        'generator' => 'tumblr Dashboard Feed 1.0',
-	        'num' => '50'
+	        'num' => '10'
 	    )
 	);
-
+	
 	// Send the POST request (with cURL)
 	$ch = curl_init('http://www.tumblr.com/api/dashboard');
 	curl_setopt($ch, CURLOPT_POST, true);
@@ -66,12 +66,17 @@ function fetch_tumblr_dashboard_xml($email, $password) {
 
 	// Check for success
 	if ($status == 200) {
-		// echo "Success! The output is $result.\n";
+		// echo "Success!";// The output is $result.\n";
 		$posts = read_xml($result);
 		output_rss($posts);
 		// cache xml file ... check last mod & serve static
 	} else if ($status == 403) {
-		echo 'Bad email or password';
+		echo "Bad email or password\n";
+		echo $result;
+		echo "\n";
+		$handle = fopen('authfail.txt','w');
+		fwrite( $handle, var_export( $request_data, true ) );
+		fclose($handle);
 	} else if ($status == 503) {
 		echo 'Rate Limit Exceded or Service Down';
 	} else {
@@ -87,20 +92,82 @@ function fetch_tumblr_dashboard_xml($email, $password) {
  */
 function read_xml($result)
 {
-	// $xml = simplexml_load_string($result);
+	$data_output = fopen("data.xml",'w');
+	fwrite($data_output,$result);
+	fclose($data_output);
+	
+	// fix quality="best">
+	$result = str_replace("quality=\"best\">","quality=\"best\"&gt;",$result);
+	
+	// fix </embed>
+	$result = str_replace("</embed>","&lt;embed/&gt;",$result);
+
+	$xml = simplexml_load_string($result);
+	
 	$xml = new SimpleXMLElement($result);
 	// var_dump($xml);die;
 	$posts = array();
 	$i = 0;
 	foreach ($xml->posts->post as $post) {
-		// var_dump($post);
-		$posts[$i]['title'] = $post['slug']; // wish there was a real title
+		
+		$log = $post->{'tumblelog'};
+		$auth = (string)$log['title'];
+		$log = strtoupper((string)$log['name']).' ('.(string)$log['title'].')';
+		$posts[$i]['title'] = $post['slug'].' '.$log.' ['.$post['type'].']'; // wish there was a real title
 		$posts[$i]['description'] = $post['type']; // maybe do somehting intelligent with type
+		$posts[$i]['author'] = $auth;
+		
+		switch($post['type']) {
+			case 'photo':
+				// Pick the first photo in the set.
+				$photo_links = $post->{'photo-url'};
+				$posts[$i]['data'] = $photo_links[0];
+				$posts[$i]['quote'] = $post->{'photo-caption'};
+				break;
+			case 'regular':
+				$posts[$i]['data'] = $post->{'regular-title'};
+				$posts[$i]['quote'] = $post->{'regular-body'};
+				break;
+			case 'answer':
+				$posts[$i]['data'] = $post->{'question'};
+				$posts[$i]['quote'] = $post->{'answer'};
+				break;
+			case 'video':
+				$posts[$i]['data'] = $post->{'video-player'};
+				$posts[$i]['quote'] = $post->{'video-caption'};
+				break;
+			case 'quote':
+				$posts[$i]['quote'] = $post->{'quote'};
+				break;
+			case 'audio':
+				//$posts[$i]['data'] = $post->{'audio-player'};
+				$posts[$i]['quote'] = $post->{'audio-caption'};
+				break;
+			case 'conversation':
+				$posts[$i]['data'] = $post->{'conversation-title'};
+				
+				$lines = array();
+				foreach($post->{'conversation'}->{'line'} as $line){
+					$lines[] = "&lt;dt&gt;".$line['label']."&lt;/dt&gt;&lt;dd&gt;".(string)$line."&lt;/dd&gt;";
+				}
+				
+				if( is_array($lines) ){
+					$convo = "&lt;dl&gt;".implode("\n",$lines)."&lt;/dl&gt;";
+					$posts[$i]['quote'] = $convo;
+				}
+				break;
+			default:
+				//var_dump($post->asXML());
+				//print "<!-- \n\n\t ".$post['type']."\n\n -->";
+				//die();
+				break;
+		}
+		
 		$posts[$i]['link'] = $post['url-with-slug'];
 		$posts[$i]['date'] = date(DATE_RSS, strtotime($post['date']) );
+		
 		$i++;
 	}
-	// var_dump($posts);
 	return $posts;
 }
 
@@ -120,14 +187,16 @@ function output_rss ($posts)
 	header('Content-type: text/xml'); // set mime ... application/rss+xml
 	header('Cache-Control: max-age=300, must-revalidate'); // cache control 5 mins
 	header('Last-Modified: ' . gmdate('D, j M Y H:i:s T', $lastmod) ); //D, j M Y H:i:s T
-	header('Expires: ' . gmdate('D, j M Y H:i:s T', time() + 300));
-
+	header('Expires: ' . gmdate('D, j M Y H:i:s T', time()));
+	
 	// conditional get ... 
+	
 	$ifmod = isset($_SERVER['HTTP_IF_MODIFIED_SINCE']) ? $_SERVER['HTTP_IF_MODIFIED_SINCE'] === gmdate('D, j M Y H:i:s T', $lastmod) : false; 
 	if ( false !== $ifmod ) {
 		header('HTTP/1.0 304 Not Modified'); 
 		exit; 
 	}
+	
 
 	// build rss using dom
 	$dom = new DomDocument();
@@ -164,7 +233,7 @@ function output_rss ($posts)
 	$webMaster = $dom->createElement('webMaster', 'webmaster@example.com (webmaster)' );
 	$channel->appendChild($webMaster);
 	$self = $dom->createElement('atom:link');
-	$self->setAttribute('href', 'http://' . $_SERVER['HTTP_HOST'] . $_SERVER['PHP_SELF']);
+	$self->setAttribute('href', 'http://tumblr.com/dashboard');
 	$self->setAttribute('rel', 'self');
 	$self->setAttribute('type', 'application/rss+xml');
 	$channel->appendChild($self);
@@ -179,8 +248,40 @@ function output_rss ($posts)
 		$item->appendChild( $link );
 		$title = $dom->createElement( "title" , $post['title'] );
 		$item->appendChild( $title );
-		$description = $dom->createElement( "description", $post['description'] );
+		$author = $dom->createElement("author",$post['author']);
+		$item->appendChild( $author );
+		
+		switch($post['description']){
+			case 'photo':
+				$description = $dom->createElement( "description", "&lt;img src=\"".$post['data']."\" /&gt;"."&lt;br /&gt;&lt;br /&gt;".$post['quote']."&lt;br /&gt;" );
+				break;
+			case 'regular':
+				$description = $dom->createElement( "description");
+				$cdata = $dom->createCDATASection($post['data']."<br />".$post['quote']."<br /><br />" );
+				$description->appendChild($cdata);
+				break;
+			case 'answer':
+				$description = $dom->createElement( "description", "&lt;strong&gt;".$post['data']."&lt;/strong&gt;&lt;br /&gt;&lt;blockquote&gt;".$post['quote']."&lt;/blockquote&gt;&lt;br /&gt;&lt;br /&gt;&lt;br /&gt;");
+				break;
+			case 'video':
+				$description = $dom->createElement( "description", $post['data']."&lt;br /&gt;".$post['quote']."&lt;br /&gt;&lt;br /&gt;" );
+				break;
+			case 'audio':
+				$description = $dom->createElement( "description", "&lt;br /&gt;".$post['quote']."&lt;br /&gt;&lt;br /&gt;" );
+				break;
+			case 'quote':
+				$description = $dom->createElement( "description", "&lt;blockquote&gt;".$post['quote']."&lt;/blockquote;&gt;&lt;br /&gt;&lt;br /&gt;&lt;br /&gt;");
+				break;
+			case 'conversation':
+				$description = $dom->createElement( "description", "&lt;strong&gt;".$post['data']."&lt;/strong&gt;&lt;br /&gt;".$post['quote']."&lt;br /&gt;&lt;br /&gt;&lt;br /&gt;");
+				break;
+			default:
+				$description = $dom->createElement( "description", $post['description'] );
+				break;
+		}
+		
 		$item->appendChild( $description );
+
 		$pubDate = $dom->createElement( "pubDate", $post['date'] );
 		$item->appendChild( $pubDate );
 		$guid = $dom->createElement( "guid", $post['link'] );
