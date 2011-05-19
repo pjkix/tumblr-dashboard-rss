@@ -10,7 +10,7 @@
  * @license http://creativecommons.org/licenses/by-nc-nd/3.0/
  * @see http://www.tumblr.com/docs/en/api
  * @version 1.2.0 $Id:$
- * @todo post types, make it more secure, multi-user friendly, compression, cacheing
+ * @todo make it more secure, multi-user friendly, compression
  */
 
 //* debug
@@ -66,6 +66,8 @@ else
  */
 function fetch_tumblr_dashboard_xml($email, $password)
 {
+	global $config;
+	$config['DEBUG'] && error_log('[DEBUG] REQUESTING API READ!');
 	// Prepare POST request
 	$request_data = http_build_query(
 	    array(
@@ -137,7 +139,9 @@ function check_cache()
 	$filename = $config['cache']['dir'] . DIRECTORY_SEPARATOR . $config['cache']['request_file'];
 	$ttl = (int) $config['cache']['ttl'];
 
-	if (file_exists($filename)  && filemtime($filename) >  time() - $ttl )
+//	var_dump($filename, $ttl, filemtime($filename), time(), time() - $ttl);die;
+
+	if (file_exists($filename)  && filemtime($filename) + $ttl >  time() )
 	{
 		$config['DEBUG'] && error_log('[DEBUG] CACHE FOUND! AND NOT EXPIRED! :)');
 		return TRUE;
