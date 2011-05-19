@@ -1,5 +1,8 @@
 ;; Tumblr Dashboard RSS settings
-;; note: single quotes might break, but double quotes or no quotes is fine 
+;; note: single quotes might break, but double quotes or no quotes is fine
+
+[genral]
+_DEBUG = TRUE
 
 [tumblr]
 email = "user@example.com"
@@ -9,3 +12,14 @@ password = "password"
 title = "My tumbler Dashboard Feed"
 link = http://tumblr.com/dashboard
 description = "My tumbler dashboard feed"
+img_size = 5 ;; 0-5 (0 is original or large, 5 is small)
+;; title_format = "[%1$s] %4$s (%2$s) - %3$s" ;; [type] longname (shortname) - entry
+title_format = "%3$s (%2$s) - %4$s [%1$s]" ;; longname (shortname) - entry [type]
+
+[cache]
+cache_request = TRUE
+cache_output = TRUE
+cache_ttl = 300 ;;  5m in seconds
+cache_dir = "./cache" ;;  make sure this is writeable for www server
+request_file = "dashboard.raw.xml"
+output_file = "dashboard.rss.xml"

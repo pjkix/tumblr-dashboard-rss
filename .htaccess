@@ -1,4 +1,6 @@
 # Protect files and directories
+#<Files ~ "\.(gif|jpe?g|png)$">
+#<FilesMatch "\.(gif|jpe?g|png)$"> 
 <Files ~ "(\.(conf|svn|git|inc|pl|sh|sql|tpl)|Repositories|scripts|updates|_notes|config.ini)$">
 	order deny,allow
 	deny from all
