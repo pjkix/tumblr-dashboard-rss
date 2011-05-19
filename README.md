@@ -38,7 +38,7 @@ v1.1.0 (2011-05-17)
 * support enclosure / media rss
 * support request caching
 * support output caching
-*
+
 
 v1.0.4 (2010-02-01)
 * initial release

@@ -19,39 +19,38 @@ error_reporting (E_ALL | E_STRICT) ;
 //*/
 
 /** Authorization info */
-$tumblr['email']    = 'email@example.com';
-$tumblr['password'] = 'password';
+$config['tumblr']['email']    = 'email@example.com';
+$config['tumblr']['password'] = 'password';
 
 /** other settings*/
-$_DEBUG = TRUE;
-$cache_request = TRUE;
-$cache_output = TRUE;
-$cache_ttl = '300'; // 5m in seconds
-$cache_dir = './cache'; // make sure this is writeable for www server
-$request_file = 'dashboard.raw.xml';
-$output_file = 'dashboard.rss.xml';
-$img_size = 5; // 0-5 (0 is original or large, 5 is small)
-//$title_format = '[%1$s] %4$s (%2$s) - %3$s'; // [type] longname (shortname) - entry
-$title_format = '%3$s (%2$s) - %4$s [%1$s]'; // longname (shortname) - entry [type]
+$config['DEBUG'] = FALSE;
+$config['cache']['request'] = TRUE;
+$config['cache']['output'] = TRUE;
+$config['cache']['ttl'] = '300'; // 5m in seconds
+$config['cache']['dir'] = './cache'; // make sure this is writeable for www server
+$config['cache']['request_file'] = 'dashboard.raw.xml';
+$config['cache']['output_file'] = 'dashboard.rss.xml';
+$config['feed']['img_size'] = 5; // 0-5 (0 is original or large, 5 is small)
+//$config['feed']['post_format'] = '[%1$s] %4$s (%2$s) - %3$s'; // [type] longname (shortname) - entry
+$config['feed']['post_format'] = '%3$s (%2$s) - %4$s [%1$s]'; // longname (shortname) - entry [type]
 
 /** read config ... if available */
 if ( file_exists('config.ini') ) {
 	$config = parse_ini_file('config.ini', TRUE);
-	extract($config);
 }
 // set GMT/UTC required for proper cache dates & feed validation
 date_default_timezone_set('GMT');
 
 // and away we go ...
-if ($cache_request && check_cache() )
+if ($config['cache']['request'] && check_cache() )
 {
-		$result = file_get_contents($cache_dir . DIRECTORY_SEPARATOR . $request_file);
+		$result = file_get_contents($config['cache']['dir'] . DIRECTORY_SEPARATOR . $config['cache']['request_file']);
 		$posts = read_xml($result);
 		output_rss($posts);
 }
 else
 {
-	fetch_tumblr_dashboard_xml($tumblr['email'], $tumblr['password']);
+	fetch_tumblr_dashboard_xml($config['tumblr']['email'], $config['tumblr']['password']);
 }
 
 
@@ -111,9 +110,10 @@ function fetch_tumblr_dashboard_xml($email, $password)
  */
 function cache_xml($result)
 {
-	if (is_writable('./cache'))
+	global $config;
+	if ( is_writable($config['cache']['dir']) )
 	{
-		$fp = fopen('./cache/dashboard.raw.xml', 'w');
+		$fp = fopen($config['cache']['dir'] . DIRECTORY_SEPARATOR . $config['cache']['request_file'], 'w');
 		fwrite($fp, $result);
 		fclose($fp);
 	}
@@ -122,18 +122,6 @@ function cache_xml($result)
 		error_log('ERROR: xml cache not writeable');
 		return FALSE;
 	}
-	//TMP
-	// import to simple xml to clean up
-	$sxml = new SimpleXMLElement($result);
-	$dom = new DOMDocument('1.0');
-	// convert to dom
-	$dom_sxe = dom_import_simplexml($sxml);
-	$dom_sxe = $dom->importNode($dom_sxe, TRUE);
-	$dom_sxe = $dom->appendChild($dom_sxe);
-	// format & output
-	$dom->formatOutput = TRUE;
-	//echo $dom->saveXML();
-	$dom->save('./cache/dashboard.clean.xml');
 
 }
 
@@ -143,12 +131,15 @@ function cache_xml($result)
  * @param type $ttl time in seconds
  * @return type bool true if file is fresh false if stale
  */
-function check_cache($filename='./cache/dashboard.raw.xml', $ttl=300)
+function check_cache()
 {
-	// check cache ...
+	global $config;
+	$filename = $config['cache']['dir'] . DIRECTORY_SEPARATOR . $config['cache']['request_file'];
+	$ttl = (int) $config['cache']['ttl'];
+
 	if (file_exists($filename)  && filemtime($filename) >  time() - $ttl )
 	{
-		$GLOBALS['_DEBUG'] && error_log('[DEBUG] CACHE FOUND! AND NOT EXPIRED! :)');
+		$config['DEBUG'] && error_log('[DEBUG] CACHE FOUND! AND NOT EXPIRED! :)');
 		return TRUE;
 	}
 	else
@@ -166,8 +157,9 @@ function check_cache($filename='./cache/dashboard.raw.xml', $ttl=300)
  */
 function read_xml($result)
 {
-	$format = $GLOBALS['title_format'];
-	$img_size = $GLOBALS['img_size'];
+	global $config;
+	$format = $config['feed']['post_format'];
+	$img_size = (int)$config['feed']['img_size'];
 
 	// $xml = simplexml_load_string($result);
 	$xml = new SimpleXMLElement($result);
@@ -253,6 +245,7 @@ function read_xml($result)
  */
 function output_rss ($posts, $cache=false, $file=NULL)
 {
+	global $config;
 	if (!is_array($posts)) die('no posts ...');
 	$lastmod = strtotime($posts[0]['date']);
 
@@ -265,7 +258,7 @@ function output_rss ($posts, $cache=false, $file=NULL)
 	// conditional get ...
 	$ifmod = isset($_SERVER['HTTP_IF_MODIFIED_SINCE']) ? $_SERVER['HTTP_IF_MODIFIED_SINCE'] === gmdate('D, j M Y H:i:s T', $lastmod) : FALSE;
 	if ( FALSE !== $ifmod ) {
-		$GLOBALS['_DEBUG'] && error_log('[DEBUG] 304 NOT MODIFIED :)');
+		$config['DEBUG'] && error_log('[DEBUG] 304 NOT MODIFIED :)');
 		header('HTTP/1.0 304 Not Modified');
 		exit;
 	}
@@ -348,8 +341,8 @@ function output_rss ($posts, $cache=false, $file=NULL)
 	  }
 
 	  // cache output
-	  if ($GLOBALS['cache_output'] === TRUE && is_writable($GLOBALS['cache_dir']))
-		  $dom->save($GLOBALS['cache_dir'] . DIRECTORY_SEPARATOR . $GLOBALS['output_file']);
+	  if ($config['cache']['output'] == TRUE && is_writable($config['cache']['dir']))
+		  $dom->save($config['cache']['dir'] . DIRECTORY_SEPARATOR . $config['cache']['output_file']);
 	  // send output to browser
 	  echo $dom->saveXML();
 
