@@ -94,8 +94,8 @@ function fetch_tumblr_dashboard_xml($email, $password)
 		// do process/output
 		$posts = read_xml($result);
 		output_rss($posts);
-		// cache xml file ... check last mod & serve static
-		cache_xml($result);
+		// cache xml file 
+		$config['cache']['request'] && cache_xml($result);
 	} else if ($status == 403) {
 		echo 'Bad email or password';
 	} else if ($status == 503) {
@@ -193,16 +193,16 @@ function read_xml($result)
 				$item['description'] = sprintf('<img src="%s"/> %s', $post->{'photo-url'}[$img_size], $post->{'photo-caption'} );
 				$item['enclosure']['url'] = (string)$post->{'photo-url'}[0];
 				$item['enclosure']['type'] = 'image/jpg'; // FIXME: best guess ... whish i knew without checking extensions
-//				var_dump($post);die;
 			break;
 
 			case 'quote':
-				$item['title'] = sprintf($format, $post['type'], $post['tumblelog'], $post->tumblelog['title'], $post->source) ;
-				$item['description'] = $post->quote;
+				$item['title'] = sprintf($format, $post['type'], $post['tumblelog'], $post->tumblelog['title'], $post['slug']) ;
+				$item['description'] = $post->{'quote-text'};
+				// var_dump($post);die;
 			break;
 
 			case 'answer':
-				$item['title'] = sprintf($format, $post['type'], $post['tumblelog'], $post->tumblelog['title'], $post['slgu']) ;
+				$item['title'] = sprintf($format, $post['type'], $post['tumblelog'], $post->tumblelog['title'], $post['slug']) ;
 				$item['description'] = $post->answer;
 			break;
 
@@ -225,8 +225,8 @@ function read_xml($result)
 
 			case 'video':
 				$item['title'] = sprintf($format, $post['type'], $post['tumblelog'], $post->tumblelog['title'], $post['slug']) ;
-				$item['description'] = 'Video ... embed goes here ... ';
-				$item['enclosure']['url'] = $post->{'video-download'};
+				$item['description'] = $post->{'video-player'}[0] . $post->{'video-caption'};
+				$item['enclosure']['url'] = $post->{'video-source'};
 				$item['enclosure']['type'] = 'video/mp4'; // FIXME: best guess without looking at extension
 			break;
 
