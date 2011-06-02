@@ -1,5 +1,5 @@
 # Protect files and directories
-<Files ~ "(\.(conf|svn|git|inc|pl|sh|sql|tpl|ini)|Repositories|scripts|updates|_notes)$">
+<Files ~ "(\.(conf|svn|git|inc|sh|sql|tpl|ini)|Repositories|scripts|updates|_notes)$">
 	order deny,allow
 	deny from all
 </Files>

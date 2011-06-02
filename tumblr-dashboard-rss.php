@@ -9,7 +9,7 @@
  * @copyright (cc) 2010 pjkix
  * @license http://creativecommons.org/licenses/by-nc-nd/3.0/
  * @see http://www.tumblr.com/docs/en/api
- * @version 1.2.0 $Id:$
+ * @version 1.1.0 $Id:$
  * @todo make it more secure, multi-user friendly, compression
  */
 
@@ -226,8 +226,11 @@ function read_xml($result)
 			case 'video':
 				$item['title'] = sprintf($format, $post['type'], $post['tumblelog'], $post->tumblelog['title'], $post['slug']) ;
 				$item['description'] = $post->{'video-player'}[0] . $post->{'video-caption'};
-				$item['enclosure']['url'] = $post->{'video-source'};
-				$item['enclosure']['type'] = 'video/mp4'; // FIXME: best guess without looking at extension
+				if ( preg_match('/https?:\/\/[^"]+/i', $post->{'video-source'}, $matches) )
+				{
+					$item['enclosure']['url'] = $matches[0]; // must be full url
+					$item['enclosure']['type'] = 'video/mp4'; // FIXME: best guess without looking at extension
+				}
 			break;
 
 			default:
@@ -254,7 +257,7 @@ function output_rss ($posts, $cache=false, $file=NULL)
 	$lastmod = strtotime($posts[0]['date']);
 
 	// http headers
-	header('Content-type: text/xml'); // set mime ... application/rss+xml
+	header('Content-type: application/xml; charset=utf-8'); // set mime ... application/rss+xml
 	header('Cache-Control: max-age=300, must-revalidate'); // cache control 5 mins
 	header('Last-Modified: ' . gmdate('D, j M Y H:i:s T', $lastmod) ); //D, j M Y H:i:s T
 	header('Expires: ' . gmdate('D, j M Y H:i:s T', time() + 300));
@@ -338,7 +341,7 @@ function output_rss ($posts, $cache=false, $file=NULL)
 			$enclosure->setAttribute('type', $post['enclosure']['type']); // valid mime type
 			$item->appendChild($enclosure);
 
-			// media rss
+			// media rss?
 		}
 
 		$channel->appendChild( $item );

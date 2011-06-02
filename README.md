@@ -1,16 +1,20 @@
 Tumblr Dashboard RSS
 ====================
 
-	Author:
-		PJ Kix <pj@pjkix.com>
-	Version:
-		1.1.0
-	Copyright:
-		(cc) 2010 pjkix some rights reserved
-	License:
-		http://creativecommons.org/licenses/by-nc-nd/3.0/
-	See Also:
-		http://www.tumblr.com/docs/en/api
+Author:
+	PJ Kix <pj@pjkix.com>
+
+Version:
+	1.1.0
+
+Copyright:
+	(cc) 2010 pjkix some rights reserved
+
+License:
+	http://creativecommons.org/licenses/by-nc-nd/3.0/
+
+See Also:
+	http://www.tumblr.com/docs/en/api
 
 Overview
 --------
